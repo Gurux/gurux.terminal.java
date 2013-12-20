@@ -45,6 +45,7 @@ import java.util.List;
 */
 public class GXTerminal implements IGXMedia
 {   
+    String m_PIN;
     //Values are saved if port is not open and user try to set them.
     int m_BaudRate = 9600;
     int m_DataBits = 8;    
@@ -58,6 +59,8 @@ public class GXTerminal implements IGXMedia
         CONNECTED
     }
 
+    int m_ConnectionWaitTime = 3000;
+    
     Progress m_Progress;
     boolean m_Server;
     String[] m_InitializeCommands;
@@ -118,6 +121,13 @@ public class GXTerminal implements IGXMedia
         return NativeCode.getPortNames();
     }
 
+    /*
+     * Get baud rates supported by given serial port.
+     */
+    public static int[] getAvailableBaudRates(String portName)
+    {                
+        return new int[]{300, 600, 1800, 2400, 4800, 9600, 19200, 38400};
+    }
     
     /** 
      Destructor.
@@ -195,6 +205,18 @@ public class GXTerminal implements IGXMedia
     {
         this.ConfigurableSettings = value;
     }
+    
+     /*
+     * Show media properties.
+     */
+    @Override 
+    public boolean properties(javax.swing.JFrame parent)
+    {
+        GXSettings dlg = new GXSettings(parent, true, this);
+        dlg.pack();
+        dlg.setVisible(true);    
+        return dlg.Accepted;
+    }
 
     /**    
      Displays the copyright of the control, user license, and version information, in a dialog box. 
@@ -261,6 +283,10 @@ public class GXTerminal implements IGXMedia
         close();
         try
         {            
+            if (m_PortName == null || m_PortName == "")
+            {
+                throw new IllegalArgumentException("Serial port is not selected.");
+            }
             synchronized (m_syncBase.m_ReceivedSync)
             {
                 m_syncBase.m_LastPosition = 0;
@@ -315,12 +341,13 @@ public class GXTerminal implements IGXMedia
                             sendCommand(it + "\r\n", "OK\r\n", true);
                         }
                     }
+                    //Send AT few times. This helps for several modems.
                     String reply;
                     sendCommand("AT\r", "OK\r\n", false);
                     sendCommand("AT\r", "OK\r\n", false);                    
                     if (m_Server)
                     {
-                         if (!"AT\r\r\n".equalsIgnoreCase(sendCommand("AT\r", "OK\r\n", false)))
+                        if (!"AT\r\r\n".equalsIgnoreCase(sendCommand("AT\r", "OK\r\n", false)))
                         {
                             reply = sendCommand("+++", "+++", true);
                             if (reply == null || reply.equals(""))
@@ -381,18 +408,19 @@ public class GXTerminal implements IGXMedia
             close();
             throw ex;
         }        
-    }
+    }   
 
-    String connect(String cmd) throws Exception
+    private String connect(String cmd) throws Exception
     {
         String eop = "\r\n";
         ReceiveParameters<String> p = new ReceiveParameters<String>(String.class);
-        p.setWaitTime(60000);
+        p.setWaitTime(m_ConnectionWaitTime);
         p.setEop(eop);
         send(cmd, null);
         StringBuilder sb = new StringBuilder();
         int index = -1;
         boolean connected;
+        String str = "";
         while(index == -1)
         {
             if (!receive(p))
@@ -400,24 +428,39 @@ public class GXTerminal implements IGXMedia
                 throw new RuntimeException("Connection failed.");
             }
             sb.append(p.getReply());
-            connected = sb.toString().lastIndexOf("CONNECT") != -1;
+            str = sb.toString();
+            connected = str.lastIndexOf("CONNECT") != -1;            
             if (connected)
             {
                 index = sb.toString().lastIndexOf("\r");
+            }
+            else 
+            {
+            	if (str.lastIndexOf("NO CARRIER") != -1) 
+                {
+                    throw new Exception("Connection failed: no carrier (when telephone call was being established). ");
+                }
+                if (str.lastIndexOf("ERROR") != -1)
+                {
+                    throw new Exception("Connection failed: error (when telephone call was being established).");                    
+                }
+                if (sb.toString().lastIndexOf("BUSY") != -1) 
+                {
+                    throw new Exception("Connection failed: busy (when telephone call was being established).");
+                }
             }
             p.setReply(null);
             //After first success read one byte at the time.
             p.setEop(null);
             p.setCount(1);
-        }
-        String reply = sb.toString();
-        return reply;
+        }       
+        return str;
     }
 
-    String sendCommand(String cmd, String eop, boolean throwError)
+    private String sendCommand(String cmd, String eop, boolean throwError)
     {
         ReceiveParameters<String> p = new ReceiveParameters<String>(String.class);
-        p.setWaitTime(3000);
+        p.setWaitTime(m_ConnectionWaitTime);
         p.setEop(eop);        
         send(cmd, null);
         StringBuilder sb = new StringBuilder();
@@ -430,7 +473,7 @@ public class GXTerminal implements IGXMedia
                 {
                     throw new RuntimeException("Failed to receive answer from the modem. Check serial port.");
                 }
-                return null;
+                return "";
             }
             sb.append(p.getReply());                
             index = sb.toString().lastIndexOf(eop);
@@ -550,6 +593,36 @@ public class GXTerminal implements IGXMedia
         }
     }
 
+    /** 
+     PIN Code.
+    */    
+    public final String getPINCode()
+    {
+        return m_PIN;
+    }
+    public final void setPINCode(String value)
+    {
+        m_PIN = value;
+    }
+    
+    /*
+     * Get or set how long (ms) modem answer is waited when connection is made.
+     */
+    public final int getConnectionWaitTime()
+    {
+        return m_ConnectionWaitTime;
+    }
+    
+    public final void setConnectionWaitTime(int value)
+    {       
+        boolean change = m_ConnectionWaitTime != value;
+        m_ConnectionWaitTime = value;
+        if (change)
+        {
+            NotifyPropertyChanged("ConnectionWaitTime");
+        }
+    }    
+    
     /** 
      True if the port is in a break state; otherwise, false.
     */
@@ -913,7 +986,7 @@ public class GXTerminal implements IGXMedia
     @Override
     public String getMediaType()
     {
-        return "Serial";
+        return "Terminal";
     }
 
     /** <inheritdoc cref="IGXMedia.Synchronous"/>
