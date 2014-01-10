@@ -36,6 +36,7 @@ package gurux.terminal;
 
 import gurux.common.*;
 import gurux.io.*;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -59,7 +60,11 @@ public class GXTerminal implements IGXMedia
         CONNECTED
     }
 
-    int m_ConnectionWaitTime = 3000;
+    //How long connection can take.
+    int m_ConnectionWaitTime = 30000;
+    
+    //How long command reply can take.
+    int m_CommadWaitTime = 3000;
     
     Progress m_Progress;
     boolean m_Server;
@@ -338,29 +343,24 @@ public class GXTerminal implements IGXMedia
                     {
                         for (String it : getInitializeCommands())
                         {
-                            sendCommand(it + "\r\n", "OK\r\n", true);
+                            sendCommand(it + "\r\n", m_CommadWaitTime, null, true);
                         }
                     }
                     //Send AT few times. This helps for several modems.
                     String reply;
-                    sendCommand("AT\r", "OK\r\n", false);
-                    sendCommand("AT\r", "OK\r\n", false);                    
+                    sendCommand("AT\r", m_CommadWaitTime, null, false);
+                    sendCommand("AT\r", m_CommadWaitTime, null, false);                    
                     if (m_Server)
                     {
-                        if (!"AT\r\r\n".equalsIgnoreCase(sendCommand("AT\r", "OK\r\n", false)))
+                        if (!"OK".equalsIgnoreCase(sendCommand("AT\r", m_CommadWaitTime, null, false)))
                         {
-                            reply = sendCommand("+++", "+++", true);
-                            if (reply == null || reply.equals(""))
-                            {
-                                throw new Exception("Invalid reply.");
-                            }
-                            reply = sendCommand("AT\r", "OK\r\n", true);
-                            if (!"AT\r\r\n".equalsIgnoreCase(reply))
+                            reply = sendCommand("AT\r", m_CommadWaitTime, null, true);
+                            if (!"OK".equalsIgnoreCase(reply))
                             {
                                 throw new Exception("Invalid reply.");
                             }
                         }
-                        reply = sendCommand("ATA\r", "\r", true);
+                        reply = sendCommand("ATA\r", m_CommadWaitTime, null, true);
                         if (!"ATA".equalsIgnoreCase(reply))
                         {
                             throw new Exception("Invalid reply.");
@@ -370,15 +370,11 @@ public class GXTerminal implements IGXMedia
                     else
                     {
                         //Send AT
-                        if ("AT\r\r\n".compareToIgnoreCase(sendCommand("AT\r", "OK\r\n", false)) != 0)
+                        if ("OK".compareToIgnoreCase(sendCommand("AT\r", m_CommadWaitTime, null, false)) != 0)
                         {
-                            reply = sendCommand("+++", "+++", true);
-                            if (reply == null || reply.equals(""))
-                            {
-                                throw new Exception("Invalid reply.");
-                            }
-                            reply = sendCommand("AT\r", "OK\r\n", true);
-                            if ("AT\r".compareToIgnoreCase(reply) != 0)                                
+                            sendCommand("+++", m_CommadWaitTime, "", true);                            
+                            reply = sendCommand("AT\r", m_CommadWaitTime, null, true);
+                            if ("OK".compareToIgnoreCase(reply) != 0)                                
                             {
                                 throw new Exception("Invalid reply.");
                             }
@@ -386,11 +382,11 @@ public class GXTerminal implements IGXMedia
                         m_Progress = Progress.CONNECTING;
                         if (m_PhoneNumber == null || m_PhoneNumber.length() == 0)
                         {
-                            connect("ATD\r\n");
+                            sendCommand("ATD\r\n", m_ConnectionWaitTime, null, true);                            
                         }
                         else
                         {
-                            connect("ATD" + m_PhoneNumber + "\r\n");
+                            sendCommand("ATD" + m_PhoneNumber + "\r\n", m_ConnectionWaitTime, null, true);
                         }
                         m_Progress = Progress.CONNECTED;
                     }
@@ -410,62 +406,43 @@ public class GXTerminal implements IGXMedia
         }        
     }   
 
-    private String connect(String cmd) throws Exception
+    private void sendBytes(byte[] value)
     {
-        String eop = "\r\n";
-        ReceiveParameters<String> p = new ReceiveParameters<String>(String.class);
-        p.setWaitTime(m_ConnectionWaitTime);
-        p.setEop(eop);
-        send(cmd, null);
-        StringBuilder sb = new StringBuilder();
-        int index = -1;
-        boolean connected;
-        String str = "";
-        while(index == -1)
+        if (m_Trace == TraceLevel.VERBOSE)
         {
-            if (!receive(p))
-            {
-                throw new RuntimeException("Connection failed.");
-            }
-            sb.append(p.getReply());
-            str = sb.toString();
-            connected = str.lastIndexOf("CONNECT") != -1;            
-            if (connected)
-            {
-                index = sb.toString().lastIndexOf("\r");
-            }
-            else 
-            {
-            	if (str.lastIndexOf("NO CARRIER") != -1) 
-                {
-                    throw new Exception("Connection failed: no carrier (when telephone call was being established). ");
-                }
-                if (str.lastIndexOf("ERROR") != -1)
-                {
-                    throw new Exception("Connection failed: error (when telephone call was being established).");                    
-                }
-                if (sb.toString().lastIndexOf("BUSY") != -1) 
-                {
-                    throw new Exception("Connection failed: busy (when telephone call was being established).");
-                }
-            }
-            p.setReply(null);
-            //After first success read one byte at the time.
-            p.setEop(null);
-            p.setCount(1);
-        }       
-        return str;
+            notifyTrace(new TraceEventArgs(TraceTypes.SENT, value));
+        }
+        m_BytesSend += value.length;
+        //Reset last position if Eop is used.
+        synchronized (m_syncBase.m_ReceivedSync)
+        {
+            m_syncBase.m_LastPosition = 0;
+        }
+        NativeCode.write(m_hWnd, value, m_WriteTimeout);
     }
 
-    private String sendCommand(String cmd, String eop, boolean throwError)
+    private String sendCommand(String cmd, int wt, String eop, boolean throwError)
     {
-        ReceiveParameters<String> p = new ReceiveParameters<String>(String.class);
-        p.setWaitTime(m_ConnectionWaitTime);
-        p.setEop(eop);        
-        send(cmd, null);
+        ReceiveParameters<String> p = new ReceiveParameters<String>(String.class);        
+        p.setWaitTime(wt);
+        p.setEop(eop != null ? eop : "\r\n");
+        if (p.getEop().equals(""))
+        {
+            p.setEop(null);
+            p.setCount(cmd.length());
+        }
+        try 
+        {
+            sendBytes(cmd.getBytes("ASCII"));
+        } 
+        catch (UnsupportedEncodingException ex) 
+        {
+            throw new RuntimeException(ex.getMessage());
+        }
         StringBuilder sb = new StringBuilder();
         int index = -1;
-        while(index == -1)
+        String reply = "";
+        while (index == -1)
         {
             if (!receive(p))
             {
@@ -475,16 +452,63 @@ public class GXTerminal implements IGXMedia
                 }
                 return "";
             }
-            sb.append(p.getReply());                
-            index = sb.toString().lastIndexOf(eop);
+            sb.append(p.getReply());
+            reply = sb.toString();
+            //Remove echo.                
+            if (sb.length() >= cmd.length() && reply.startsWith(cmd))
+            {
+                sb.delete(0, cmd.length());
+                reply = sb.toString();
+                //Remove echo and return if we are not expecting reply.
+                if (eop != null && eop.equals(""))
+                {
+                    return "";
+                }
+            }
+            if (eop != null)
+            {
+                index = reply.lastIndexOf(eop);
+            }
+            else if (reply.length() > 5)
+            {
+                index = reply.lastIndexOf("\r\nOK\r\n");
+                if (index == -1)
+                {
+                    index = reply.lastIndexOf("ERROR:");                    
+                    if (index == -1)
+                    {
+                        index = reply.lastIndexOf("CONNECT");
+                        if (index == -1)
+                        {
+                            if (reply.lastIndexOf("NO CARRIER") != -1)
+                            {
+                                throw new RuntimeException("Connection failed: no carrier (when telephone call was being established). ");
+                            }
+                            if (reply.lastIndexOf("ERROR") != -1)
+                            {
+                                throw new RuntimeException("Connection failed: error (when telephone call was being established).");
+                            }
+                            if (reply.lastIndexOf("BUSY") != -1)
+                            {
+                                throw new RuntimeException("Connection failed: busy (when telephone call was being established).");
+                            }
+                        }
+                    }
+                }
+                //If there is a message before OK show it.
+                else if (index != 0)
+                {
+                    reply = reply.substring(0, index);
+                    index = 0;
+                }
+            }
             p.setReply(null);
-            //After first success read one byte at the time.
-            p.setEop(null);
-            p.setCount(1);
         }
-        String reply = sb.toString();
-        index = sb.length() - eop.length();
-        reply = reply.substring(0, index);
+        if (index != 0 & eop == null)
+        {
+            reply = reply.substring(0, 0) + reply.substring(0 + index);
+        }
+        reply = reply.trim();
         return reply;
     }
     
@@ -516,7 +540,8 @@ public class GXTerminal implements IGXMedia
                         {
                             if (m_Progress == Progress.CONNECTED)
                             {
-                                sendCommand("ATH\r", "\n", false);
+                                String reply = sendCommand("+++", m_CommadWaitTime, "", true);
+                                sendCommand("ATH\r", m_ConnectionWaitTime, null, false);
                             }                            
                         }
                     }
@@ -622,6 +647,26 @@ public class GXTerminal implements IGXMedia
             NotifyPropertyChanged("ConnectionWaitTime");
         }
     }    
+    
+    /*
+     * Get or set how long (ms) modem answer is waited when command is send for the modem.
+     */
+    public final int getCommandWaitTime()
+    {
+        return m_CommadWaitTime;
+    }
+    
+    public final void setCommandWaitTime(int value)
+    {       
+        boolean change = m_CommadWaitTime != value;
+        m_CommadWaitTime = value;
+        if (change)
+        {
+            NotifyPropertyChanged("CommadWaitTime");
+        }
+    }    
+    
+    
     
     /** 
      True if the port is in a break state; otherwise, false.
