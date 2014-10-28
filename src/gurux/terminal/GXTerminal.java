@@ -372,7 +372,6 @@ public class GXTerminal implements IGXMedia
                         //Send AT
                         if ("OK".compareToIgnoreCase(sendCommand("AT\r", m_CommadWaitTime, null, false)) != 0)
                         {
-                            sendCommand("+++", m_CommadWaitTime, "", true);                            
                             reply = sendCommand("AT\r", m_CommadWaitTime, null, true);
                             if ("OK".compareToIgnoreCase(reply) != 0)                                
                             {
@@ -480,9 +479,24 @@ public class GXTerminal implements IGXMedia
                         index = reply.lastIndexOf("CONNECT");
                         if (index == -1)
                         {
-                            if (reply.lastIndexOf("NO CARRIER") != -1)
+                            index = reply.lastIndexOf("NO CARRIER");
+                            if (index != -1)
                             {
-                                throw new RuntimeException("Connection failed: no carrier (when telephone call was being established). ");
+                                String str = "Connection failed: no carrier (when telephone call was being established). ";                                
+                                int start = reply.indexOf("CAUSE:");
+                                if (start != -1)
+                                {
+                                    if (start < index)
+                                    {
+                                        str += reply.substring(start, index).trim();
+                                    }
+                                    else
+                                    {
+                                        str += reply.substring(start).trim();
+                                    }
+                                }
+                                str += "\r\n" + sendCommand("AT+CEER\r", wt, null, false);                                
+                                throw new RuntimeException(str);
                             }
                             if (reply.lastIndexOf("ERROR") != -1)
                             {
@@ -540,8 +554,28 @@ public class GXTerminal implements IGXMedia
                         {
                             if (m_Progress == Progress.CONNECTED)
                             {
-                                String reply = sendCommand("+++", m_CommadWaitTime, "", true);
-                                sendCommand("ATH\r", m_ConnectionWaitTime, null, false);
+                                try 
+                                {
+                                    Thread.sleep(1000);
+                                } 
+                                catch (InterruptedException ex) 
+                                {
+                                    throw new RuntimeException(ex.getMessage());
+                                }
+                                ReceiveParameters<String> p = new ReceiveParameters<String>(String.class);        
+                                p.setWaitTime(m_CommadWaitTime);
+                                p.setCount(3);
+                                try 
+                                {
+                                    sendBytes("+++".getBytes("ASCII"));
+                                } 
+                                catch (UnsupportedEncodingException ex) 
+                                {
+                                    throw new RuntimeException(ex.getMessage());
+                                }
+                                //It's OK if this fails.
+                                receive(p);
+                                sendCommand("ATH0\r", m_ConnectionWaitTime, null, false);
                             }                            
                         }
                     }
