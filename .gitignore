@@ -16,6 +16,8 @@ local.properties
 .settings/
 .loadpath
 nbproject/private/
+doc/
+target/
 
 # External tool builders
 .externalToolBuilders/
@@ -214,3 +216,7 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+*.svn-base
+src/main/resources/.svn/wc.db
+src/main/resources/.svn/entries
+src/main/resources/.svn/format
