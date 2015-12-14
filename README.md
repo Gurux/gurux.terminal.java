@@ -15,12 +15,13 @@ We are updating documentation on Gurux web page.
 If you have problems you can ask your questions in Gurux [Forum](http://www.gurux.org/forum).
 
 You can get source codes from http://www.github.com/gurux or if you use Maven add this to your POM-file:
-
+```java
 <dependency>
   <groupId>org.gurux</groupId>
   <artifactId>gurux.terminal</artifactId>
   <version>1.0.3</version>
 </dependency>
+```
 
 Simple example
 =========================== 
