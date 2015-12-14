@@ -10,12 +10,12 @@ import junit.framework.TestSuite;
  */
 public class GXTerminalTest extends TestCase {
     /**
-     * Create the test case
+     * Create the test case.
      *
      * @param testName
-     *            name of the test case
+     *            Name of the test case.
      */
-    public GXTerminalTest(String testName) {
+    public GXTerminalTest(final String testName) {
         super(testName);
     }
 
@@ -29,7 +29,7 @@ public class GXTerminalTest extends TestCase {
     /**
      * Test native library load.
      */
-    public void testNativeLibrary() {
+    public final void testNativeLibrary() {
         GXTerminal.getPortNames();
     }
 }
