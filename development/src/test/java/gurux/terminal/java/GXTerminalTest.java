@@ -1,5 +1,7 @@
 package gurux.terminal.java;
 
+import gurux.io.Parity;
+import gurux.io.StopBits;
 import gurux.terminal.GXTerminal;
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -31,5 +33,24 @@ public class GXTerminalTest extends TestCase {
      */
     public final void testNativeLibrary() {
         GXTerminal.getPortNames();
+    }
+
+    /**
+     * Settings test.
+     */
+    public final void testSettings() {
+        String nl = System.getProperty("line.separator");
+        try (GXTerminal serial =
+                new GXTerminal("COM1", 300, 7, Parity.EVEN, StopBits.ONE)) {
+            serial.setPhoneNumber("+358 3 265 1244");
+            String expected = "<Number>+358 3 265 1244</Number>" + nl
+                    + "<Port>COM1</Port>" + nl + "<BaudRate>300</BaudRate>" + nl
+                    + "<Parity>2</Parity>" + nl + "<DataBits>7</DataBits>" + nl;
+            String actual = serial.getSettings();
+            assertEquals(expected, actual);
+            try (GXTerminal serial1 = new GXTerminal()) {
+                serial1.setSettings(actual);
+            }
+        }
     }
 }
