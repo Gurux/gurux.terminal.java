@@ -42,6 +42,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JRootPane;
 import javax.swing.KeyStroke;
 
+import gurux.io.BaudRate;
 import gurux.io.Parity;
 import gurux.io.StopBits;
 
@@ -177,7 +178,7 @@ class GXSettings extends javax.swing.JDialog implements ActionListener {
         target = comp;
         String[] ports = GXTerminal.getPortNames();
         portCB.setModel(new DefaultComboBoxModel<String>(ports));
-        int[] rates = GXTerminal.getAvailableBaudRates(null);
+        BaudRate[] rates = GXTerminal.getAvailableBaudRates(null);
         baudRateCB
                 .setModel(new DefaultComboBoxModel<String>(getStrings(rates)));
         // CHECKSTYLE:OFF
@@ -258,6 +259,23 @@ class GXSettings extends javax.swing.JDialog implements ActionListener {
         default:
         }
         return "";
+    }
+
+    /**
+     * Convert array of integers to string.
+     * 
+     * @param list
+     *            Array of integer values.
+     * @return Array of string values.
+     */
+    final String[] getStrings(final BaudRate[] list) {
+        String[] tmp = new String[list.length];
+        int pos = 0;
+        for (BaudRate it : list) {
+            tmp[pos] = String.valueOf(it.getValue());
+            ++pos;
+        }
+        return tmp;
     }
 
     /**
@@ -649,19 +667,17 @@ class GXSettings extends javax.swing.JDialog implements ActionListener {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(layout
                 .createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(layout.createSequentialGroup()
-                        .addGroup(layout
-                                .createParallelGroup(
-                                        javax.swing.GroupLayout.Alignment.TRAILING)
-                                .addGroup(layout.createSequentialGroup()
-                                        .addComponent(okBtn)
-                                        .addPreferredGap(
-                                                javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                        .addComponent(cancelBtn))
-                                .addComponent(jPanel1,
-                                        javax.swing.GroupLayout.PREFERRED_SIZE,
-                                        321,
-                                        javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGroup(layout.createSequentialGroup().addGroup(layout
+                        .createParallelGroup(
+                                javax.swing.GroupLayout.Alignment.TRAILING)
+                        .addGroup(layout.createSequentialGroup()
+                                .addComponent(okBtn)
+                                .addPreferredGap(
+                                        javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(cancelBtn))
+                        .addComponent(jPanel1,
+                                javax.swing.GroupLayout.PREFERRED_SIZE, 321,
+                                javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addGap(0, 11, Short.MAX_VALUE)));
         layout.setVerticalGroup(layout
                 .createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -701,8 +717,8 @@ class GXSettings extends javax.swing.JDialog implements ActionListener {
             target.setPhoneNumber(phoneNumberTB.getText());
             target.setPINCode(this.pinCodeTB.getText());
             target.setPortName(this.portCB.getSelectedItem().toString());
-            target.setBaudRate(Integer
-                    .parseInt(this.baudRateCB.getSelectedItem().toString()));
+            target.setBaudRate(BaudRate.forValue(Integer
+                    .parseInt(this.baudRateCB.getSelectedItem().toString())));
             target.setDataBits(Integer
                     .parseInt(this.dataBitsCB.getSelectedItem().toString()));
             target.setParity(gurux.io.Parity.valueOf(

@@ -102,10 +102,6 @@ public class GXTerminal implements IGXMedia, AutoCloseable {
      */
     static final int DEFUALT_READ_BUFFER_SIZE = 256;
     /**
-     * Default baud rate.
-     */
-    static final int DEFAULT_BAUD_RATE = 9600;
-    /**
      * Amount of default data bits.
      */
     static final int DEFAULT_DATA_BITS = 8;
@@ -116,7 +112,7 @@ public class GXTerminal implements IGXMedia, AutoCloseable {
     /**
      * Used baud rate.
      */
-    private int baudRate = DEFAULT_BAUD_RATE;
+    private BaudRate baudRate = BaudRate.BAUD_RATE_9600;
     /**
      * Amount of data bits.
      */
@@ -264,7 +260,7 @@ public class GXTerminal implements IGXMedia, AutoCloseable {
      * @param stopBitsValue
      *            Stop bits.
      */
-    public GXTerminal(final String port, final int baudRateValue,
+    public GXTerminal(final String port, final BaudRate baudRateValue,
             final int dataBitsValue, final Parity parityValue,
             final StopBits stopBitsValue) {
         phoneNumber = "";
@@ -413,15 +409,11 @@ public class GXTerminal implements IGXMedia, AutoCloseable {
      *            Name of serial port.
      * @return Collection of available baud rates.
      */
-    public static int[] getAvailableBaudRates(final String portName) {
-        return new int[] { BaudRate.BAUD_RATE_300.getValue(),
-                BaudRate.BAUD_RATE_600.getValue(),
-                BaudRate.BAUD_RATE_1800.getValue(),
-                BaudRate.BAUD_RATE_2400.getValue(),
-                BaudRate.BAUD_RATE_4800.getValue(),
-                BaudRate.BAUD_RATE_9600.getValue(),
-                BaudRate.BAUD_RATE_19200.getValue(),
-                BaudRate.BAUD_RATE_38400.getValue() };
+    public static BaudRate[] getAvailableBaudRates(final String portName) {
+        return new BaudRate[] { BaudRate.BAUD_RATE_300, BaudRate.BAUD_RATE_600,
+                BaudRate.BAUD_RATE_1800, BaudRate.BAUD_RATE_2400,
+                BaudRate.BAUD_RATE_4800, BaudRate.BAUD_RATE_9600,
+                BaudRate.BAUD_RATE_19200, BaudRate.BAUD_RATE_38400 };
     }
 
     @Override
@@ -592,7 +584,7 @@ public class GXTerminal implements IGXMedia, AutoCloseable {
             long[] tmp = new long[1];
             hWnd = NativeCode.openSerialPort(portName, tmp);
             // If user has change values before open.
-            if (baudRate != DEFAULT_BAUD_RATE) {
+            if (baudRate != BaudRate.BAUD_RATE_9600) {
                 setBaudRate(baudRate);
             }
             if (dataBits != DEFAULT_DATA_BITS) {
@@ -862,11 +854,11 @@ public class GXTerminal implements IGXMedia, AutoCloseable {
      * 
      * @return Used baud rate.
      */
-    public final int getBaudRate() {
+    public final BaudRate getBaudRate() {
         if (hWnd == 0) {
             return baudRate;
         }
-        return NativeCode.getBaudRate(hWnd);
+        return BaudRate.forValue(NativeCode.getBaudRate(hWnd));
     }
 
     /**
@@ -875,13 +867,13 @@ public class GXTerminal implements IGXMedia, AutoCloseable {
      * @param value
      *            New baud rate.
      */
-    public final void setBaudRate(final int value) {
+    public final void setBaudRate(final BaudRate value) {
         boolean change = getBaudRate() != value;
         if (change) {
             if (hWnd == 0) {
                 baudRate = value;
             } else {
-                NativeCode.setBaudRate(hWnd, value);
+                NativeCode.setBaudRate(hWnd, value.getValue());
             }
             notifyPropertyChanged("BaudRate");
         }
@@ -1383,9 +1375,9 @@ public class GXTerminal implements IGXMedia, AutoCloseable {
             sb.append("</Port>");
             sb.append(nl);
         }
-        if (baudRate != DEFAULT_BAUD_RATE) {
+        if (baudRate != BaudRate.BAUD_RATE_9600) {
             sb.append("<BaudRate>");
-            sb.append(String.valueOf(baudRate));
+            sb.append(String.valueOf(baudRate.getValue()));
             sb.append("</BaudRate>");
             sb.append(nl);
         }
@@ -1423,6 +1415,15 @@ public class GXTerminal implements IGXMedia, AutoCloseable {
 
     @Override
     public final void setSettings(final String value) {
+        // Reset to default values.
+        portName = "";
+        baudRate = BaudRate.BAUD_RATE_9600;
+        stopBits = StopBits.ONE;
+        parity = Parity.NONE;
+        dataBits = DEFAULT_DATA_BITS;
+        phoneNumber = "";
+        server = false;
+        initializeCommands = new String[0];
         if (value != null && !value.isEmpty()) {
             try {
                 DocumentBuilderFactory factory =
@@ -1457,8 +1458,8 @@ public class GXTerminal implements IGXMedia, AutoCloseable {
                             setPortName(it.getFirstChild().getNodeValue());
                         } else if ("BaudRate"
                                 .equalsIgnoreCase(it.getNodeName())) {
-                            setBaudRate(Integer.parseInt(
-                                    it.getFirstChild().getNodeValue()));
+                            setBaudRate(BaudRate.forValue(Integer.parseInt(
+                                    it.getFirstChild().getNodeValue())));
                         } else if ("StopBits"
                                 .equalsIgnoreCase(it.getNodeName())) {
                             setStopBits(StopBits.values()[Integer.parseInt(

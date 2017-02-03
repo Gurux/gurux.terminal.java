@@ -1,5 +1,6 @@
 package gurux.terminal.java;
 
+import gurux.io.BaudRate;
 import gurux.io.Parity;
 import gurux.io.StopBits;
 import gurux.terminal.GXTerminal;
@@ -40,8 +41,8 @@ public class GXTerminalTest extends TestCase {
      */
     public final void testSettings() {
         String nl = System.getProperty("line.separator");
-        try (GXTerminal serial =
-                new GXTerminal("COM1", 300, 7, Parity.EVEN, StopBits.ONE)) {
+        try (GXTerminal serial = new GXTerminal("COM1", BaudRate.BAUD_RATE_300,
+                7, Parity.EVEN, StopBits.ONE)) {
             serial.setPhoneNumber("+358 3 265 1244");
             String expected = "<Number>+358 3 265 1244</Number>" + nl
                     + "<Port>COM1</Port>" + nl + "<BaudRate>300</BaudRate>" + nl
