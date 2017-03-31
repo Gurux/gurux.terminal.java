@@ -64,7 +64,7 @@ public class GuruxTerminalExampleJava extends javax.swing.JFrame
     gurux.terminal.GXTerminal terminal = new gurux.terminal.GXTerminal();
 
     @Override
-    public void onError(Object sender, RuntimeException ex) {
+    public void onError(Object sender, Exception ex) {
         try {
             terminal.close();
             JOptionPane.showMessageDialog(this, ex.getMessage());
