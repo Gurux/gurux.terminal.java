@@ -364,30 +364,38 @@ public class GXTerminal implements IGXMedia, AutoCloseable {
                     path = "win64";
                 }
             } else if (isUnix(os)) {
-                if (is32Bit) {
-                    path = "linux86";
+                if (System.getProperty("os.arch").indexOf("arm") != -1) {
+                    if (is32Bit) {
+                        path = "arm32";
+                    } else {
+                        path = "arm64";
+                    }
                 } else {
-                    path = "linux64";
+                    if (is32Bit) {
+                        path = "linux86";
+                    } else {
+                        path = "linux64";
+                    }
                 }
             } else {
                 throw new RuntimeException("Invald operating system. " + os);
             }
             File file;
             try {
-                file = File.createTempFile("gurux.serial.java", ".dll");
+                file = File.createTempFile("gurux.terminal.java", ".dll");
             } catch (IOException e1) {
-                throw new RuntimeException(
-                        "Failed to load file. " + path + "/gurux.serial.java");
+                throw new RuntimeException("Failed to load file. " + path
+                        + "/gurux.terminal.java");
             }
             try (InputStream in =
                     GXTerminal.class.getResourceAsStream("/" + path + "/"
-                            + System.mapLibraryName("gurux.serial.java"))) {
+                            + System.mapLibraryName("gurux.terminal.java"))) {
                 Files.copy(in, file.toPath(),
                         StandardCopyOption.REPLACE_EXISTING);
                 System.load(file.getAbsolutePath());
             } catch (Exception e) {
                 throw new RuntimeException("Failed to load file. " + path
-                        + "/gurux.serial.java" + e.toString());
+                        + "/gurux.terminal.java" + e.toString());
             }
         }
     }
