@@ -55,7 +55,7 @@ import org.xml.sax.InputSource;
 import gurux.common.GXCommon;
 import gurux.common.GXSync;
 import gurux.common.GXSynchronousMediaBase;
-import gurux.common.IGXMedia;
+import gurux.common.IGXMedia2;
 import gurux.common.IGXMediaListener;
 import gurux.common.MediaStateEventArgs;
 import gurux.common.PropertyChangedEventArgs;
@@ -76,7 +76,10 @@ import gurux.terminal.enums.AvailableMediaSettings;
  * The GXTerminal component determines methods that make the communication
  * possible using terminal (modem) connection.
  */
-public class GXTerminal implements IGXMedia, AutoCloseable {
+public class GXTerminal implements IGXMedia2, AutoCloseable {
+    private int receiveDelay;
+
+    private int asyncWaitTime;
     /**
      * Minimum reply size in bytes.
      */
@@ -384,8 +387,8 @@ public class GXTerminal implements IGXMedia, AutoCloseable {
             try {
                 file = File.createTempFile("gurux.serial.java", ".dll");
             } catch (IOException e1) {
-                throw new RuntimeException("Failed to load file. " + path
-                        + "/gurux.serial.java");
+                throw new RuntimeException(
+                        "Failed to load file. " + path + "/gurux.serial.java");
             }
             try (InputStream in =
                     GXTerminal.class.getResourceAsStream("/" + path + "/"
@@ -1587,5 +1590,30 @@ public class GXTerminal implements IGXMedia, AutoCloseable {
     @Override
     public final void removeListener(final IGXMediaListener listener) {
         mediaListeners.remove(listener);
+    }
+
+    @Override
+    public int getReceiveDelay() {
+        return receiveDelay;
+    }
+
+    @Override
+    public void setReceiveDelay(final int value) {
+        receiveDelay = value;
+    }
+
+    @Override
+    public int getAsyncWaitTime() {
+        return asyncWaitTime;
+    }
+
+    @Override
+    public void setAsyncWaitTime(final int value) {
+        asyncWaitTime = value;
+    }
+
+    @Override
+    public Object getAsyncWaitHandle() {
+        return null;
     }
 }

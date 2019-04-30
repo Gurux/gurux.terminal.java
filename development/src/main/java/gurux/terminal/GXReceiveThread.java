@@ -40,6 +40,7 @@ import gurux.common.GXSynchronousMediaBase;
 import gurux.common.ReceiveEventArgs;
 import gurux.common.enums.TraceLevel;
 import gurux.common.enums.TraceTypes;
+import gurux.io.NativeCode;
 
 /**
  * Receive thread listens serial port and sends received data to the listeners.
@@ -75,7 +76,7 @@ class GXReceiveThread extends Thread {
      *            Handle for the serial port.
      */
     GXReceiveThread(final GXTerminal parent, final long hComPort) {
-        super("GXTerminal " + new Long(hComPort).toString());
+        super("GXTerminal " + String.valueOf(hComPort));
         comPort = hComPort;
         parentMedia = parent;
     }
@@ -173,7 +174,17 @@ class GXReceiveThread extends Thread {
                     parentMedia.setClosing(0);
                     break;
                 }
-                handleReceivedData(buff);
+                Thread.sleep(parentMedia.getReceiveDelay());
+                byte[] buff2 = NativeCode.read(this.comPort, 0,
+                        parentMedia.getClosing());
+                if (buff2.length != 0) {
+                    byte[] tmp = new byte[buff.length + buff2.length];
+                    System.arraycopy(buff, 0, tmp, 0, buff.length);
+                    System.arraycopy(buff2, 0, tmp, buff.length, buff2.length);
+                    handleReceivedData(tmp);
+                } else {
+                    handleReceivedData(buff);
+                }
             } catch (Exception ex) {
                 if (!Thread.currentThread().isInterrupted()) {
                     parentMedia
