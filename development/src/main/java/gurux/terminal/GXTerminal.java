@@ -55,6 +55,7 @@ import org.xml.sax.InputSource;
 import gurux.common.GXCommon;
 import gurux.common.GXSync;
 import gurux.common.GXSynchronousMediaBase;
+import gurux.common.IGXMedia;
 import gurux.common.IGXMedia2;
 import gurux.common.IGXMediaListener;
 import gurux.common.MediaStateEventArgs;
@@ -76,7 +77,7 @@ import gurux.terminal.enums.AvailableMediaSettings;
  * The GXTerminal component determines methods that make the communication
  * possible using terminal (modem) connection.
  */
-public class GXTerminal implements IGXMedia2, AutoCloseable {
+public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
     private int receiveDelay;
 
     private int asyncWaitTime;
@@ -796,7 +797,7 @@ public class GXTerminal implements IGXMedia2, AutoCloseable {
             }
             p.setReply(null);
         }
-        if (index != 0 & commandEop == null) {
+        if (index != 0 && commandEop == null) {
             reply = reply.substring(0, 0) + reply.substring(0 + index);
         }
         reply = reply.trim();
