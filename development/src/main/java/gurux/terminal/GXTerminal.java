@@ -1385,6 +1385,13 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
         StringBuilder sb = new StringBuilder();
         String nl = System.getProperty("line.separator");
 
+        if (pin != null && !pin.isEmpty()) {
+            sb.append("<PIN>");
+            sb.append(pin);
+            sb.append("</PIN>");
+            sb.append(nl);
+        }
+
         if (phoneNumber != null && !phoneNumber.isEmpty()) {
             sb.append("<Number>");
             sb.append(phoneNumber);
@@ -1491,6 +1498,8 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
                             setDataBits(Integer.parseInt(it.getFirstChild().getNodeValue()));
                         } else if ("Number".equalsIgnoreCase(it.getNodeName())) {
                             setPhoneNumber(it.getFirstChild().getNodeValue());
+                        } else if ("PIN".equalsIgnoreCase(it.getNodeName())) {
+                            setPINCode(it.getFirstChild().getNodeValue());
                         } else if ("Server".equalsIgnoreCase(it.getNodeName())) {
                             server = true;
                         } else if ("Init".equalsIgnoreCase(it.getNodeName())) {
@@ -1502,7 +1511,6 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
                 throw new RuntimeException(e.getMessage());
             }
         }
-
     }
 
     @Override
@@ -1513,6 +1521,8 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
         setStopBits(tmp.getStopBits());
         setParity(tmp.getParity());
         setDataBits(tmp.getDataBits());
+        setPINCode(tmp.getPINCode());
+        setInitializeCommands(getInitializeCommands());
     }
 
     @Override
