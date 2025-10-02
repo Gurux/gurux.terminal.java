@@ -78,6 +78,11 @@ import gurux.terminal.enums.AvailableMediaSettings;
  * possible using terminal (modem) connection.
  */
 public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
+    /**
+     * Error string.
+     */
+    static final String ERROR = "ERROR:";
+
     private int receiveDelay;
 
     private int asyncWaitTime;
@@ -236,8 +241,7 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
     /**
      * Media listeners.
      */
-    private List<IGXMediaListener> mediaListeners =
-            new ArrayList<IGXMediaListener>();
+    private List<IGXMediaListener> mediaListeners = new ArrayList<IGXMediaListener>();
 
     /**
      * Constructor.
@@ -264,9 +268,8 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
      * @param stopBitsValue
      *            Stop bits.
      */
-    public GXTerminal(final String port, final BaudRate baudRateValue,
-            final int dataBitsValue, final Parity parityValue,
-            final StopBits stopBitsValue) {
+    public GXTerminal(final String port, final BaudRate baudRateValue, final int dataBitsValue,
+            final Parity parityValue, final StopBits stopBitsValue) {
         phoneNumber = "";
         initialize();
         readBufferSize = DEFUALT_READ_BUFFER_SIZE;
@@ -337,8 +340,7 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
      * @return True if Unix.
      */
     static boolean isUnix(final String os) {
-        return (os.indexOf("nix") >= 0 || os.indexOf("nux") >= 0
-                || os.indexOf("aix") >= 0);
+        return (os.indexOf("nix") >= 0 || os.indexOf("nux") >= 0 || os.indexOf("aix") >= 0);
     }
 
     /**
@@ -359,8 +361,7 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
         if (!initialized) {
             String path;
             String os = System.getProperty("os.name").toLowerCase();
-            boolean is32Bit =
-                    System.getProperty("sun.arch.data.model").equals("32");
+            boolean is32Bit = System.getProperty("sun.arch.data.model").equals("32");
             if (isWindows(os)) {
                 if (is32Bit) {
                     path = "win32";
@@ -388,18 +389,14 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
             try {
                 file = File.createTempFile("gurux.serial.java", ".dll");
             } catch (IOException e1) {
-                throw new RuntimeException(
-                        "Failed to load file. " + path + "/gurux.serial.java");
+                throw new RuntimeException("Failed to load file. " + path + "/gurux.serial.java");
             }
-            try (InputStream in =
-                    GXTerminal.class.getResourceAsStream("/" + path + "/"
-                            + System.mapLibraryName("gurux.serial.java"))) {
-                Files.copy(in, file.toPath(),
-                        StandardCopyOption.REPLACE_EXISTING);
+            try (InputStream in = GXTerminal.class
+                    .getResourceAsStream("/" + path + "/" + System.mapLibraryName("gurux.serial.java"))) {
+                Files.copy(in, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 System.load(file.getAbsolutePath());
             } catch (Exception e) {
-                throw new RuntimeException("Failed to load file. " + path
-                        + "/gurux.serial.java" + e.toString());
+                throw new RuntimeException("Failed to load file. " + path + "/gurux.serial.java" + e.toString());
             }
         }
     }
@@ -422,10 +419,9 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
      * @return Collection of available baud rates.
      */
     public static BaudRate[] getAvailableBaudRates(final String portName) {
-        return new BaudRate[] { BaudRate.BAUD_RATE_300, BaudRate.BAUD_RATE_600,
-                BaudRate.BAUD_RATE_1800, BaudRate.BAUD_RATE_2400,
-                BaudRate.BAUD_RATE_4800, BaudRate.BAUD_RATE_9600,
-                BaudRate.BAUD_RATE_19200, BaudRate.BAUD_RATE_38400 };
+        return new BaudRate[] { BaudRate.BAUD_RATE_300, BaudRate.BAUD_RATE_600, BaudRate.BAUD_RATE_1800,
+                BaudRate.BAUD_RATE_2400, BaudRate.BAUD_RATE_4800, BaudRate.BAUD_RATE_9600, BaudRate.BAUD_RATE_19200,
+                BaudRate.BAUD_RATE_38400 };
     }
 
     @Override
@@ -455,8 +451,7 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
      */
     private void notifyPropertyChanged(final String info) {
         for (IGXMediaListener listener : mediaListeners) {
-            listener.onPropertyChanged(this,
-                    new PropertyChangedEventArgs(info));
+            listener.onPropertyChanged(this, new PropertyChangedEventArgs(info));
         }
     }
 
@@ -470,8 +465,7 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
         for (IGXMediaListener listener : mediaListeners) {
             listener.onError(this, ex);
             if (trace.ordinal() >= TraceLevel.ERROR.ordinal()) {
-                listener.onTrace(this,
-                        new TraceEventArgs(TraceTypes.ERROR, ex));
+                listener.onTrace(this, new TraceEventArgs(TraceTypes.ERROR, ex));
             }
         }
     }
@@ -540,8 +534,7 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
         }
         byte[] buff = GXSynchronousMediaBase.getAsByteArray(data);
         if (buff == null) {
-            throw new IllegalArgumentException(
-                    "Data send failed. Invalid data.");
+            throw new IllegalArgumentException("Data send failed. Invalid data.");
         }
         NativeCode.write(hWnd, buff, writeTimeout);
         this.bytesSend += buff.length;
@@ -556,11 +549,26 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
     private void notifyMediaStateChange(final MediaState state) {
         for (IGXMediaListener listener : mediaListeners) {
             if (trace.ordinal() >= TraceLevel.ERROR.ordinal()) {
-                listener.onTrace(this,
-                        new TraceEventArgs(TraceTypes.INFO, state));
+                listener.onTrace(this, new TraceEventArgs(TraceTypes.INFO, state));
             }
             listener.onMediaStateChange(this, new MediaStateEventArgs(state));
         }
+    }
+
+    /**
+     * Get error from the string.
+     * 
+     * @param reply
+     *            Reply string from the modem.
+     * @return Error string if exists.
+     */
+    private static String getError(final String reply) {
+
+        int pos = reply.indexOf(GXTerminal.ERROR);
+        if (pos != -1) {
+            return reply.substring(pos + GXTerminal.ERROR.length()).trim();
+        }
+        return reply.trim();
     }
 
     /**
@@ -571,8 +579,7 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
         close();
         try {
             if (portName == null || portName == "") {
-                throw new IllegalArgumentException(
-                        "Serial port is not selected.");
+                throw new IllegalArgumentException("Serial port is not selected.");
             }
             synchronized (syncBase.getSync()) {
                 syncBase.resetLastPosition();
@@ -586,12 +593,9 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
                     eopStr = getEop().toString();
                 }
                 notifyTrace(new TraceEventArgs(TraceTypes.INFO,
-                        "Settings: Port: " + this.getPortName() + " Baud Rate: "
-                                + getBaudRate() + " Data Bits: "
-                                + (new Integer(getDataBits())).toString()
-                                + " Parity: " + getParity().toString()
-                                + " Stop Bits: " + getStopBits().toString()
-                                + " Eop:" + eopStr));
+                        "Settings: Port: " + this.getPortName() + " Baud Rate: " + getBaudRate() + " Data Bits: "
+                                + getDataBits() + " Parity: " + getParity().toString() + " Stop Bits: "
+                                + getStopBits().toString() + " Eop:" + eopStr));
             }
             long[] tmp = new long[1];
             hWnd = NativeCode.openSerialPort(portName, tmp);
@@ -619,8 +623,7 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
                 synchronized (getSynchronous()) {
                     if (getInitializeCommands() != null) {
                         for (String it : getInitializeCommands()) {
-                            sendCommand(it + "\r\n", commadWaitTime, null,
-                                    true);
+                            sendCommand(it + "\r\n", commadWaitTime, null, true);
                         }
                     }
                     // Send AT few times. This helps for several modems.
@@ -628,37 +631,65 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
                     sendCommand("AT\r", commadWaitTime, null, false);
                     sendCommand("AT\r", commadWaitTime, null, false);
                     if (server) {
-                        if (!"OK".equalsIgnoreCase(sendCommand("AT\r",
-                                commadWaitTime, null, false))) {
-                            reply = sendCommand("AT\r", commadWaitTime, null,
-                                    true);
+                        if (!"OK".equalsIgnoreCase(sendCommand("AT\r", commadWaitTime, null, false))) {
+                            reply = sendCommand("AT\r", commadWaitTime, null, true);
                             if (!"OK".equalsIgnoreCase(reply)) {
                                 throw new Exception("Invalid reply.");
                             }
                         }
-                        reply = sendCommand("ATA\r", commadWaitTime, null,
-                                true);
+                        reply = sendCommand("ATA\r", commadWaitTime, null, true);
                         if (!"ATA".equalsIgnoreCase(reply)) {
                             throw new Exception("Invalid reply.");
                         }
                         progress = Progress.CONNECTING;
                     } else {
                         // Send AT
-                        if ("OK".compareToIgnoreCase(sendCommand("AT\r",
-                                commadWaitTime, null, false)) != 0) {
-                            reply = sendCommand("AT\r", commadWaitTime, null,
-                                    true);
+                        if ("OK".compareToIgnoreCase(sendCommand("AT\r", commadWaitTime, null, false)) != 0) {
+                            reply = sendCommand("AT\r", commadWaitTime, null, true);
                             if ("OK".compareToIgnoreCase(reply) != 0) {
                                 throw new Exception("Invalid reply.");
                             }
                         }
+                        // Enable error reporting. It's OK if this fails.
+                        sendCommand("AT+CMEE\r", commadWaitTime, null, false);
+                        // Enable verbode error code,
+                        reply = sendCommand("AT+CMEE=2\r", commadWaitTime, null, false);
+                        if (!reply.equals("OK")) {
+                            // Enable numeric error codes
+                            sendCommand("AT+CMEE=1\r", commadWaitTime, null, false);
+                        }
+                        reply = sendCommand("AT+CPIN=?\r", commadWaitTime, null, false);
+                        boolean pinSupported = reply.equals("OK");
+                        // Is PIN Code supported.
+                        if (pinSupported) {
+                            // Check PIN-Code
+                            reply = sendCommand("AT+CPIN?\r", commadWaitTime, null, false);
+                            if (reply.contains("ERROR:")) {
+                                throw new RuntimeException("Failed to read PIN code.\r\n" + getError(reply));
+                            }
+                            // If PIN code is needed.
+                            if (!reply.equals("+CPIN: READY")) {
+                                if (pin == null || pin.equals("")) {
+                                    throw new RuntimeException("PIN is needed.");
+                                }
+                                reply = sendCommand(String.format("AT+CPIN=\"%1$s\"\r", pin), commadWaitTime, null,
+                                        false);
+                                if (!reply.equals("OK")) {
+                                    throw new RuntimeException("Failed to set PIN code." + getError(reply));
+                                }
+                                // Ask PIN Code again.
+                                reply = sendCommand("AT+CPIN?\r", commadWaitTime, null, false);
+                                if (!reply.equals("OK")) {
+                                    throw new RuntimeException("Failed to set PIN code." + getError(reply));
+                                }
+                            }
+                        }
+
                         progress = Progress.CONNECTING;
                         if (phoneNumber == null || phoneNumber.length() == 0) {
-                            sendCommand("ATD\r\n", connectionWaitTime, null,
-                                    true);
+                            sendCommand("ATD\r\n", connectionWaitTime, null, true);
                         } else {
-                            sendCommand("ATD" + phoneNumber + "\r\n",
-                                    connectionWaitTime, null, true);
+                            sendCommand("ATD" + phoneNumber + "\r\n", connectionWaitTime, null, true);
                         }
                         progress = Progress.CONNECTED;
                     }
@@ -705,10 +736,8 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
      *            Is error thrown is reply message is not received.
      * @return Received reply.
      */
-    private String sendCommand(final String cmd, final int wt,
-            final String commandEop, final boolean throwError) {
-        ReceiveParameters<String> p =
-                new ReceiveParameters<String>(String.class);
+    private String sendCommand(final String cmd, final int wt, final String commandEop, final boolean throwError) {
+        ReceiveParameters<String> p = new ReceiveParameters<String>(String.class);
         p.setWaitTime(wt);
         if (commandEop != null) {
             p.setEop(commandEop);
@@ -731,9 +760,7 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
         while (index == -1) {
             if (!receive(p)) {
                 if (throwError) {
-                    throw new RuntimeException(
-                            "Failed to receive answer from the modem. "
-                                    + "Check serial port.");
+                    throw new RuntimeException("Failed to receive answer from the modem. " + "Check serial port.");
                 }
                 return "";
             }
@@ -759,33 +786,26 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
                         if (index == -1) {
                             index = reply.lastIndexOf("NO CARRIER");
                             if (index != -1) {
-                                String str = "Connection failed: no carrier "
-                                        + "(when telephone call was "
+                                String str = "Connection failed: no carrier " + "(when telephone call was "
                                         + "being established). ";
                                 int start = reply.indexOf("CAUSE:");
                                 if (start != -1) {
                                     if (start < index) {
-                                        str += reply.substring(start, index)
-                                                .trim();
+                                        str += reply.substring(start, index).trim();
                                     } else {
                                         str += reply.substring(start).trim();
                                     }
                                 }
-                                str += "\r\n" + sendCommand("AT+CEER\r", wt,
-                                        null, false);
+                                str += "\r\n" + sendCommand("AT+CEER\r", wt, null, false);
                                 throw new RuntimeException(str);
                             }
                             if (reply.lastIndexOf("ERROR") != -1) {
-                                throw new RuntimeException(
-                                        "Connection failed: error "
-                                                + "(when telephone call "
-                                                + "was being established).");
+                                throw new RuntimeException("Connection failed: error " + "(when telephone call "
+                                        + "was being established).");
                             }
                             if (reply.lastIndexOf("BUSY") != -1) {
-                                throw new RuntimeException(
-                                        "Connection failed: busy "
-                                                + "(when telephone call "
-                                                + "was being established).");
+                                throw new RuntimeException("Connection failed: busy " + "(when telephone call "
+                                        + "was being established).");
                             }
                         }
                     }
@@ -823,9 +843,7 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
                                 } catch (InterruptedException ex) {
                                     throw new RuntimeException(ex.getMessage());
                                 }
-                                ReceiveParameters<String> p =
-                                        new ReceiveParameters<String>(
-                                                String.class);
+                                ReceiveParameters<String> p = new ReceiveParameters<String>(String.class);
                                 p.setWaitTime(commadWaitTime);
                                 p.setCount("+++".length());
                                 try {
@@ -835,8 +853,7 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
                                 }
                                 // It's OK if this fails.
                                 receive(p);
-                                sendCommand("ATH0\r", connectionWaitTime, null,
-                                        false);
+                                sendCommand("ATH0\r", connectionWaitTime, null, false);
                             }
                         }
                     } finally {
@@ -907,8 +924,7 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
      *            Phone number.
      */
     public final void setPhoneNumber(final String value) {
-        boolean change =
-                phoneNumber == null || phoneNumber.equalsIgnoreCase(value);
+        boolean change = phoneNumber == null || phoneNumber.equalsIgnoreCase(value);
         phoneNumber = value;
         if (change) {
             notifyPropertyChanged("BaudRate");
@@ -1438,8 +1454,7 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
         initializeCommands = new String[0];
         if (value != null && !value.isEmpty()) {
             try {
-                DocumentBuilderFactory factory =
-                        DocumentBuilderFactory.newInstance();
+                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
                 DocumentBuilder builder = factory.newDocumentBuilder();
                 StringBuilder sb = new StringBuilder();
                 if (value.startsWith("<?xml version=\"1.0\"?>")) {
@@ -1453,14 +1468,12 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
                     sb.append(nl);
                     sb.append("</Net>");
                 }
-                InputSource is =
-                        new InputSource(new StringReader(sb.toString()));
+                InputSource is = new InputSource(new StringReader(sb.toString()));
                 Document doc = builder.parse(is);
                 doc.getDocumentElement().normalize();
                 NodeList nList = doc.getChildNodes();
                 if (nList.getLength() != 1) {
-                    throw new IllegalArgumentException(
-                            "Invalid XML root node.");
+                    throw new IllegalArgumentException("Invalid XML root node.");
                 }
                 nList = nList.item(0).getChildNodes();
                 for (int pos = 0; pos < nList.getLength(); ++pos) {
@@ -1468,31 +1481,20 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
                     if (it.getNodeType() == Node.ELEMENT_NODE) {
                         if ("Port".equalsIgnoreCase(it.getNodeName())) {
                             setPortName(it.getFirstChild().getNodeValue());
-                        } else if ("BaudRate"
-                                .equalsIgnoreCase(it.getNodeName())) {
-                            setBaudRate(BaudRate.forValue(Integer.parseInt(
-                                    it.getFirstChild().getNodeValue())));
-                        } else if ("StopBits"
-                                .equalsIgnoreCase(it.getNodeName())) {
-                            setStopBits(StopBits.values()[Integer.parseInt(
-                                    it.getFirstChild().getNodeValue())]);
-                        } else if ("Parity"
-                                .equalsIgnoreCase(it.getNodeName())) {
-                            setParity(Parity.values()[Integer.parseInt(
-                                    it.getFirstChild().getNodeValue())]);
-                        } else if ("DataBits"
-                                .equalsIgnoreCase(it.getNodeName())) {
-                            setDataBits(Integer.parseInt(
-                                    it.getFirstChild().getNodeValue()));
-                        } else if ("Number"
-                                .equalsIgnoreCase(it.getNodeName())) {
+                        } else if ("BaudRate".equalsIgnoreCase(it.getNodeName())) {
+                            setBaudRate(BaudRate.forValue(Integer.parseInt(it.getFirstChild().getNodeValue())));
+                        } else if ("StopBits".equalsIgnoreCase(it.getNodeName())) {
+                            setStopBits(StopBits.values()[Integer.parseInt(it.getFirstChild().getNodeValue())]);
+                        } else if ("Parity".equalsIgnoreCase(it.getNodeName())) {
+                            setParity(Parity.values()[Integer.parseInt(it.getFirstChild().getNodeValue())]);
+                        } else if ("DataBits".equalsIgnoreCase(it.getNodeName())) {
+                            setDataBits(Integer.parseInt(it.getFirstChild().getNodeValue()));
+                        } else if ("Number".equalsIgnoreCase(it.getNodeName())) {
                             setPhoneNumber(it.getFirstChild().getNodeValue());
-                        } else if ("Server"
-                                .equalsIgnoreCase(it.getNodeName())) {
+                        } else if ("Server".equalsIgnoreCase(it.getNodeName())) {
                             server = true;
                         } else if ("Init".equalsIgnoreCase(it.getNodeName())) {
-                            initializeCommands = it.getFirstChild()
-                                    .getNodeValue().split("[;]");
+                            initializeCommands = it.getFirstChild().getNodeValue().split("[;]");
                         }
                     }
                 }
