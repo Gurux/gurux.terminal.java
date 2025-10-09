@@ -872,7 +872,6 @@ public class GXTerminal implements IGXMedia, IGXMedia2, AutoCloseable {
                 hWnd = 0;
                 notifyMediaStateChange(MediaState.CLOSED);
                 bytesSend = 0;
-                receiver.resetBytesReceived();
                 syncBase.resetReceivedSize();
             }
         }
